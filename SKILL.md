@@ -2,7 +2,7 @@
 name: dialog-distill
 description: |
   老板/lead 对话沉淀 · 扫最近对话识别可沉淀点 (decisions · push back · 偏好 · 新 SOP · 新规约) · 推荐沉淀位置 (CLAUDE.md / memories / skills / agents) · 老板挑后自动写 4 真源 + commit。
-  TRIGGER when 老板说"/dialog-distill"、"沉淀对话"、"把这条规约记下来"、"总结最近对话沉淀进 prompt source"、"我们对话学的东西沉淀一下"。
+  TRIGGER when 老板说"/dialog-distill"、"分析对话"、"分析最近对话"、"分析对话沉淀"、"沉淀"、"沉淀对话"、"对话沉淀"、"把这条规约记下来"、"总结最近对话沉淀进 prompt source"、"我们对话学的东西沉淀一下"、"提炼对话"、"复盘对话"。
   DO NOT TRIGGER when 是单条 fix 错误 (用 fix-prompt-source 更窄)、是已 commit 的代码改动 (用 git log)、是临时调试笔记 (chat history 自带)。
 argument-hint: ""
 category: meta
