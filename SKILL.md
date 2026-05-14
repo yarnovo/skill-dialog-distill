@@ -1,8 +1,8 @@
 ---
 name: dialog-distill
 description: |
-  老板/lead 对话沉淀 · 扫最近对话识别可沉淀点 (decisions · push back · 偏好 · 新 SOP · 新规约) · 推荐沉淀位置 (CLAUDE.md / memories / skills / agents) · 老板挑后自动写 4 真源 + commit。
-  TRIGGER when 老板说"/dialog-distill"、"分析对话"、"分析最近对话"、"分析对话沉淀"、"沉淀"、"沉淀对话"、"对话沉淀"、"把这条规约记下来"、"总结最近对话沉淀进 prompt source"、"我们对话学的东西沉淀一下"、"提炼对话"、"复盘对话"。
+  老板/lead 对话驱动的 4 真源 CRUD · 扫最近对话识别可沉淀点 (decisions · push back · 偏好 · 新 SOP · 新规约 · 冲突点) · 推荐沉淀位置 (CLAUDE.md / memories / skills / agents) · 老板挑后自动 Create/Update/Delete 4 真源 + commit · 对话实践跟历史 memory 冲突时以对话为准。
+  TRIGGER when 老板说"/dialog-distill"、"分析对话"、"分析最近对话"、"分析对话沉淀"、"沉淀"、"沉淀对话"、"对话沉淀"、"把这条规约记下来"、"总结最近对话沉淀进 prompt source"、"我们对话学的东西沉淀一下"、"提炼对话"、"复盘对话"、"对话跟记忆冲突"、"以我们的为准修记忆"、"回顾对话改 skill/agents/memory"。
   DO NOT TRIGGER when 是单条 fix 错误 (用 fix-prompt-source 更窄)、是已 commit 的代码改动 (用 git log)、是临时调试笔记 (chat history 自带)。
 argument-hint: ""
 category: meta
@@ -31,15 +31,42 @@ allowed-tools: Bash, Read, Edit, Write, AskUserQuestion
 
 ## 触发后流程 (5 步)
 
-### 1. 扫最近对话
+### 1. 扫最近对话 · 5 类目标 (C/U/D 全谱)
 
-lead 内置识别 · 不需外部工具。重点抓:
+lead 内置识别 · 不需外部工具。**5 类目标全扫 · 不只 Create**:
 
-- 老板原话引用 (不脑补 · 不极端化 · 见 feedback_dont_extrapolate_boss_words)
+| 类目标 | 表现 | 落点动作 |
+|---|---|---|
+| **C 新增** | 老板拍新规约 / 新偏好 / 新资源 / 新决策 | Write memory / Write skill / Write agent / Edit CLAUDE.md 加索引 |
+| **U 更新** | 老板细化 / 修正 / 推翻已有规约 | Edit 对应 memory/skill/agent · 不留旧版本层 (见 `feedback_memory_latest_only`) |
+| **D 删除** | 老板撤掉旧规约 (例 5-14 撤 5-13 "必派 subagent") · 或冲突识别后旧条过时 | Delete memory 文件 + Edit CLAUDE.md 删索引行 · Edit skill 段落 · Edit agent 段落 |
+| **冲突识别** | 对话实践跟历史 memory/skill/agent 不一致 | **以对话为准** (老板原话权威) · 走 D 或 U 路径修正旧源 |
+| **lead 执行漏** | 老板纠的错 · 但 memory 内容本身已对 (lead 加载了没执行) | **不动 memory** · 在 commit message / 沉淀报告里标 "lead 执行漏 · memory 无错" · 留 git trail 即可 |
+
+### 1.5 冲突识别 SOP (对话 vs 历史源)
+
+每个候选必带"冲突扫描":
+
+```
+1. grep 对话关键词 → 看 memories/ + skills/ + agents/ + CLAUDE.md
+2. 找到相关条 → 跟对话拍板对比
+3. 分三类:
+   a. 内容一致 → lead 执行漏 (不动源)
+   b. 内容部分冲突 → U 更新 (改细节 · 留主框架)
+   c. 内容根本冲突 (旧规约被推翻) → D 删除 + 新 C 写入
+4. 报告里标清 (a/b/c)
+```
+
+⚠️ **lead 执行漏 ≠ memory 错** · 不要误判改 memory · 这会把对的规约改坏。
+
+重点抓 (5 类内的具体 signal):
+
+- 老板原话引用 (不脑补 · 不极端化 · 见 `feedback_dont_extrapolate_boss_words`)
 - 决策点 / push back / 拍板 / 偏好表态
 - 新 SOP / 新规约 / 新流程
 - 新资源 / 新凭证 / 新域名
 - 反例 (老板纠正 lead) → 但若是单错优先走 fix-prompt-source
+- **冲突点** (老板说"以我们的为准" / "这跟之前矛盾" / "之前那条不算了") → 优先 D/U 旧条
 
 ### 2. 列可沉淀点
 
@@ -48,9 +75,11 @@ lead 内置识别 · 不需外部工具。重点抓:
 ```
 ### 候选 N · <一句话标题>
 
-- 类型: <decision / push back / 偏好 / SOP / 反例 / 凭证 / 资源>
+- 类型: <decision / push back / 偏好 / SOP / 反例 / 凭证 / 资源 / 冲突点>
+- 操作: <C 新增 / U 更新 / D 删除 / NoOp lead 执行漏>
 - 老板原话: "<≤ 2 句直接引用>"
 - 推荐落点: <CLAUDE.md / memories/<file>.md / skills/<name>/SKILL.md / agents/<name>.md>
+- 冲突扫描: <相关历史源 grep 结果 · 列已存在条 + 一致/冲突判定>
 - 推荐 frontmatter:
     - memory: name / description / type / activation
     - skill: TRIGGER / DO NOT TRIGGER
@@ -64,19 +93,36 @@ lead 内置识别 · 不需外部工具。重点抓:
 
 不让老板一个个拍 · 一次菜单挑完。
 
-### 4. 自动写 / 改文件
+### 4. 自动 CRUD 文件
 
-按老板拍的:
+按老板拍的 · 4 真源各支持 C/U/D:
 
-- 新 memory → Write `~/.claude/memories/<filename>.md` + Edit `~/.claude/CLAUDE.md` 索引行
-- 修 memory → Edit `~/.claude/memories/<file>.md`
-- 修 CLAUDE.md → Edit
-- 新 skill → 走 project-skill-setup (不在本 skill 范围 · 让老板手动调)
-- 修 skill → Edit `~/.claude/repos/skills/<name>/SKILL.md`
-- 新 agent → Write `~/.claude/agents/<name>.md`
-- 修 agent → Edit
+**memory**:
+- C 新增 → Write `~/.claude/memories/<filename>.md` + Edit `~/.claude/CLAUDE.md` 加索引行
+- U 更新 → Edit `~/.claude/memories/<file>.md` · 必要时同步改 CLAUDE.md 索引摘要
+- D 删除 → `rm ~/.claude/memories/<file>.md` + Edit `~/.claude/CLAUDE.md` 删索引行
 
-每次 Edit / Write 必须真改真验证 · 不只草拟。
+**CLAUDE.md**:
+- Edit (改硬规则段 / 索引段 / 调顺序)
+
+**skill** (各 skill 真源在 `~/.claude/repos/skills/<name>/`):
+- C 新增 → 走 project-skill-setup (不在本 skill · 老板手动调)
+- U 更新 → Edit `~/.claude/repos/skills/<name>/SKILL.md`
+- D 删除 → 整 skill 退役: `cd ~/.claude/repos/skills/<name> && git rm -r .` + 主仓删 submodule entry + 删 ~/.claude/skills/<name> symlink
+
+**agent** (各 agent 真源在 `~/.claude/repos/agents/<name>/`):
+- C 新增 → 走 agent-hiring (不在本 skill · 老板手动调)
+- U 更新 → Edit `~/.claude/repos/agents/<name>/<name>.md`
+- D 删除 → 整 agent 退役: 同 skill 模式
+
+每次 Edit / Write / Delete 必须真改真验证 · 不只草拟。
+
+### 4.5 NoOp 路径 (lead 执行漏)
+
+候选标 "操作: NoOp" 时不动任何源文件 · 只:
+- 在沉淀报告里标 "lead 执行漏 · memory `<name>` 内容无错"
+- commit message 引用本次冲突点 (留 git trail)
+- 不写新 memory (反复犯同款再考虑加强源)
 
 ### 5. commit + push
 
