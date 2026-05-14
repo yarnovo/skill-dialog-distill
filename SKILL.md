@@ -3,7 +3,7 @@ name: dialog-distill
 description: |
   老板/lead 对话驱动的 4 真源 CRUD · 扫最近对话识别可沉淀点 (decisions · push back · 偏好 · 新 SOP · 新规约 · 冲突点) · 推荐沉淀位置 (CLAUDE.md / memories / skills / agents) · 老板挑后自动 Create/Update/Delete 4 真源 + commit · 对话实践跟历史 memory 冲突时以对话为准。
   TRIGGER when 老板说"/dialog-distill"、"分析对话"、"分析最近对话"、"分析对话沉淀"、"沉淀"、"沉淀对话"、"对话沉淀"、"把这条规约记下来"、"总结最近对话沉淀进 prompt source"、"我们对话学的东西沉淀一下"、"提炼对话"、"复盘对话"、"对话跟记忆冲突"、"以我们的为准修记忆"、"回顾对话改 skill/agents/memory"。
-  DO NOT TRIGGER when 是单条 fix 错误 (用 fix-prompt-source 更窄)、是已 commit 的代码改动 (用 git log)、是临时调试笔记 (chat history 自带)。
+  DO NOT TRIGGER when 是单条 fix 错误 (用 fix-prompt-source 更窄)、是已 commit 的代码改动 (用 git log)、是临时调试笔记 (chat history 自带)、是老板情绪/抱怨/语气助词 (不构成规约)。
 argument-hint: ""
 category: meta
 allowed-tools: Bash, Read, Edit, Write, AskUserQuestion
@@ -59,6 +59,14 @@ lead 内置识别 · 不需外部工具。**5 类目标全扫 · 不只 Create**
 
 ⚠️ **lead 执行漏 ≠ memory 错** · 不要误判改 memory · 这会把对的规约改坏。
 
+### 1.6 已 commit 的沉淀点跳过 (防重复列)
+
+对话窗口里前面 turn 已经 commit 完的沉淀点 (`cd ~/.claude && git log --since="<对话起始>" --oneline -- memories/ CLAUDE.md`) · 本次扫描跳过 · 不重复列候选。
+
+例: 同 1 天早段已 commit 的新 memory + 后段又跑 dialog-distill · 后段不再把早段已入库的当新候选 · 防 lead 重复挑 + 老板重复拍。
+
+报告里标"本次跳过 N 条 (已在 git log)" 让老板知道扫了什么。
+
 重点抓 (5 类内的具体 signal):
 
 - 老板原话引用 (不脑补 · 不极端化 · 见 `feedback_dont_extrapolate_boss_words`)
@@ -86,6 +94,11 @@ lead 内置识别 · 不需外部工具。**5 类目标全扫 · 不只 Create**
     - agent: TRIGGER / DO NOT TRIGGER
 - 推荐内容: <一段草拟 · ≤ 5 行>
 ```
+
+**NoOp 候选也列进菜单** (老板可见 · 可改判 U/D):
+- lead 判 "lead 执行漏 · memory 内容无错 · 留 git trail" 也写候选行
+- 操作字段标 "NoOp" · 推荐落点 "(不动 memory · 留 git commit message)"
+- 老板看到可改判 "强化原 memory 加段" (U) 或 "彻底改条规则" (D)
 
 ### 3. 老板挑
 
