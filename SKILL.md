@@ -134,6 +134,66 @@ lead 内置识别 · 不需外部工具。**5 类目标全扫 · 不只 Create**
 
 跟 fix-prompt-source / memory-to-skill 一致。
 
+### 6. double-check · spawn 通用 subagent 复盘 (老板 5-14 拍 · 不招专 agent)
+
+每次跑完 5 步 (不管动了多少源 / 动了几个 NoOp) · **必跑第 6 步**:
+
+```python
+Agent(
+  subagent_type="general-purpose",
+  description="dialog-distill double-check",
+  prompt=f"""
+  你是 dialog-distill skill 跑完一次后的独立 reviewer · 一次性 · review-only · 不动文件。
+
+  你 review 两件事:
+
+  ## A. dialog-distill skill 本身 (update 建议)
+  - 真源: ~/.claude/repos/skills/dialog-distill/SKILL.md (先 cat 全文)
+  - 看 8 维度: TRIGGER 词覆盖 / DO NOT TRIGGER 边界 / CRUD 路径完整 / 冲突识别 SOP / 候选模板字段 / AskUserQuestion 用法 / commit 规约 / skill 边界
+  - 找 gap: 本次跑时 skill 有没有漏 / 误导 / 字段不够 / 边界模糊
+
+  ## B. 本次跑出的结果 (优化建议)
+  - lead 列的候选 + lead 判定 C/U/D/NoOp + 实际 commit
+  - 看 lead 有没有漏候选 / 误判 NoOp / 落点错 / 内容草拟不够 / commit message 不规约
+
+  ## 本次会话原文 + lead 产物
+
+  <lead 在 spawn 时粘贴 / 给文件路径>
+
+  ## 输出格式 (返 ≤ 5 段 markdown)
+
+  ### A · skill 本身 update 建议
+
+  - P0 / P1 / P2 各列 ≤ 3 条 · 每条: 维度 + SKILL.md 行号 + 对话证据 + 改法建议
+  - 没问题就直说 "本次 skill 表现 OK · 没 P0/P1"
+
+  ### B · 本次结果优化建议
+
+  - 漏候选 / 误判 / 落点错 / 草拟不够 各列 ≤ 3 条 · 给具体改法
+  - 没问题就直说 "本次结果 OK"
+
+  ### 摘要
+
+  1-2 句 · 总体健康度 + 最该改的 1 件事
+
+  ## 你不做啥
+
+  - ❌ 不动任何 ~/.claude 真源 (SKILL.md / memory / agent / CLAUDE.md)
+  - ❌ 不评判 lead 决策 (lead NoOp vs C/U/D 是 lead 自决 · 你只看 skill 有没有支持好)
+  - ❌ 不编造 P0 凑数 · 没问题直说
+  - ❌ 不审 dialog-distill 之外的 skill (跑题)
+  """
+)
+```
+
+lead 拿到 review 后:
+
+- A 部分有 P0/P1 → lead 自己 Edit `~/.claude/repos/skills/dialog-distill/SKILL.md` + commit + push 子仓 + bump 主仓 submodule pointer
+- B 部分有漏 → lead 自己补改 (新候选 / 改落点 / 重写 commit message amend)
+- 都 OK → 不动 · 报告"本次 dialog-distill 跑完 + double-check 无 gap"
+
+⚠️ **double-check 不是审 lead 决策** · 是审 **skill 本身够不够好** + **本次跑得对不对**。lead NoOp 选择是 lead 自决范围 · subagent 不评 (skill prompt 明示)。
+
 ## 7 类沉淀对象 (lead 扫对话时识别)
 
 | 类型 | 落点 | 例 |
